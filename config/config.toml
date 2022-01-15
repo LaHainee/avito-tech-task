@@ -1,0 +1,7 @@
+logging_level = "debug"
+logging_file_path = "./logs/"
+
+currency_api_url = "http://www.cbr-xml-daily.ru/latest.js"
+
+[server]
+database_conn_string = "dbname=balance sslmode=disable"
