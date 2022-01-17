@@ -11,9 +11,23 @@ import (
 )
 
 func NewLogger(config *config.Config) (*logrus.Logger, func() error) {
+	doesLogDirExist := true
+	if _, err := os.Stat(config.LoggingFilePath); err != nil {
+		if os.IsNotExist(err) {
+			doesLogDirExist = false
+		} else {
+			logrus.Fatalf("Could not check if logs directory exist: %s", err)
+		}
+	}
+	if !doesLogDirExist {
+		if	err := os.Mkdir(config.LoggingFilePath, 0777); err != nil {
+			logrus.Fatalf("Could not created directory %s: %s", config.LoggingFilePath, err)
+		}
+	}
+
 	level, err := logrus.ParseLevel(config.LoggingLevel)
 	if err != nil {
-		logrus.Fatal("Could not parse logging level: %s", err)
+		logrus.Fatalf("Could not parse logging level: %s", err)
 	}
 
 	logger := logrus.New()
@@ -26,7 +40,7 @@ func NewLogger(config *config.Config) (*logrus.Logger, func() error) {
 		time.Now().Minute(),
 		time.Now().Second()) + ".log"
 
-	file, err := os.OpenFile(format, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(config.LoggingFilePath+format, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		logrus.Fatalf("Could not open file %s: %s", format, err)
 	}

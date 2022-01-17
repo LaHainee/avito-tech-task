@@ -1,27 +1,23 @@
 package utils
 
 import (
-	"github.com/jackc/pgx"
+	"context"
+	"github.com/jackc/pgx/v4"
 	"github.com/sirupsen/logrus"
 
 	"avito-tech-task/config"
 )
 
-func NewPostgresConnection(config *config.Config) *pgx.ConnPool {
-	pgxConnectionConfig, err := pgx.ParseConnectionString(config.Server.DatabaseConnString)
-	if err != nil {
-		logrus.Fatalf("Could not parse connection string %s: %s", config.Server.DatabaseConnString, err)
-	}
+type PgxIface interface {
+	Begin(context.Context) (pgx.Tx, error)
+	Close(context.Context) error
+}
 
-	pool, err := pgx.NewConnPool(pgx.ConnPoolConfig{
-		ConnConfig:     pgxConnectionConfig,
-		MaxConnections: 100,
-		AfterConnect:   nil,
-		AcquireTimeout: 0,
-	})
+func NewPostgresConnection(config *config.Config) *pgx.Conn {
+	conn, err := pgx.Connect(context.Background(), config.Server.DatabaseConnString)
 	if err != nil {
 		logrus.Fatalf("Could not establish connection to database: %s", err)
 	}
 
-	return pool
+	return conn
 }

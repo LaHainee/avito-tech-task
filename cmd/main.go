@@ -2,11 +2,11 @@ package main
 
 import (
 	"avito-tech-task/internal/pkg/currency"
+	"context"
 	"github.com/BurntSushi/toml"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,12 +27,12 @@ type Handlers struct {
 	TransactionsHandlers deliveryTransactions.Handlers
 }
 
-func NewHandlers(pool *pgx.ConnPool, logger *logrus.Logger, validator *utils.Validation, converter *currency.Converter) *Handlers {
-	balanceStorage := repositoryBalance.NewStorage(pool)
+func NewHandlers(conn utils.PgxIface , logger *logrus.Logger, validator *utils.Validation, converter *currency.Converter) *Handlers {
+	balanceStorage := repositoryBalance.NewStorage(conn)
 	balanceService := usecaseBalance.NewService(balanceStorage, validator, converter)
 	balanceHandlers := deliveryBalance.NewHandlers(balanceService, logger)
 
-	transactionsStorage := repositoryTransactions.NewStorage(pool)
+	transactionsStorage := repositoryTransactions.NewStorage(conn)
 	transactionsService := usecaseTransactions.NewService(transactionsStorage)
 	transactionsHandlers := deliveryTransactions.NewHandlers(transactionsService, logger)
 
@@ -42,6 +42,16 @@ func NewHandlers(pool *pgx.ConnPool, logger *logrus.Logger, validator *utils.Val
 	}
 }
 
+// @title        BalanceApplication
+// @version      1.0
+// @description  API for BalanceApplication
+
+// @license.name  ""
+
+// @BasePath  /api/v1
+
+// @x-extension-openapi  {"example": "value on a json format"}
+
 func main() {
 	server := echo.New()
 
@@ -50,7 +60,13 @@ func main() {
 		logrus.Fatalf("Could not decode config: %s", err)
 	}
 
-	pool := utils.NewPostgresConnection(config)
+	conn := utils.NewPostgresConnection(config)
+	defer func(conn *pgx.Conn, ctx context.Context) {
+		err := conn.Close(ctx)
+		if err != nil {
+			logrus.Fatalf("Could not close database connection: %s", err)
+		}
+	}(conn, context.Background())
 
 	logger, fileClose := utils.NewLogger(config)
 	defer func(close func() error) {
@@ -63,7 +79,7 @@ func main() {
 
 	converter := currency.NewConverter(config, logger)
 
-	api := NewHandlers(pool, logger, validator, converter)
+	api := NewHandlers(conn, logger, validator, converter)
 	api.BalanceHandlers.InitHandlers(server)
 	api.TransactionsHandlers.InitHandlers(server)
 
@@ -77,7 +93,6 @@ func main() {
 	done := make(chan os.Signal)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(done, os.Kill)
-	log.Println("Graceful shutdown")
 	<-done
 	cancel <- struct{}{}
 }

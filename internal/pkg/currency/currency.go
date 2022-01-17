@@ -1,16 +1,15 @@
 package currency
 
 import (
+	"avito-tech-task/internal/pkg/constants"
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"avito-tech-task/config"
-	"avito-tech-task/internal/pkg/constants"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 )
 
@@ -88,7 +87,7 @@ func (c *Converter) Update() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if err = json.Unmarshal(body, &c); err != nil {
-		c.logger.Errorf("Could not umarshal response body into struct: %s", err)
+		c.logger.Errorf("Could not unmarshal response body into struct: %s", err)
 		return
 	}
 	c.Rates["RUB"] = 1
@@ -113,10 +112,8 @@ func UpdateCurrency(converter *Converter, cancel <-chan struct{}) {
 		select {
 		case <-cancel:
 			return
-		default:
+		case <-time.After(constants.CurrencyAPIUpdatePeriod):
 			converter.Update()
 		}
-
-		time.Sleep(constants.CurrencyAPIUpdatePeriod)
 	}
 }

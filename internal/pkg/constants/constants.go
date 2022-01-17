@@ -9,6 +9,6 @@ const (
 	InvalidUserIDMessage = "Invalid user id"
 	InvalidQueryParams   = "Invalid query params"
 
-	CurrencyAPIUpdatePeriod = 24 * time.Hour
-	// CurrencyAPIUpdatePeriod = 10 * time.Second
+	// CurrencyAPIUpdatePeriod = 24 * time.Hour
+	CurrencyAPIUpdatePeriod = 10 * time.Second
 )

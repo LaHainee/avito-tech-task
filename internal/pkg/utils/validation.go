@@ -32,5 +32,3 @@ func (v *Validation) Validate(i interface{}) validator.ValidationErrors {
 func validateOperationType(fl validator.FieldLevel) bool {
 	return fl.Field().Int() <= models.REDUCE && fl.Field().Int() >= 0
 }
-
-

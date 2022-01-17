@@ -2,35 +2,51 @@ package repository
 
 import (
 	"avito-tech-task/internal/app/models"
+	"avito-tech-task/internal/pkg/utils"
+	"context"
 	"fmt"
-	"github.com/jackc/pgx"
-)
-
-const (
-	queryUpdateBalance     = `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
-	queryAddNewTransaction = `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
-	queryGetUserBalance    = `SELECT balance FROM balance WHERE user_id = $1`
-	queryAddNewAccount     = `INSERT INTO balance (user_id, balance) VALUES($1, 0)`
+	"github.com/jackc/pgx/v4"
 )
 
 type Storage struct {
-	pool *pgx.ConnPool
+	db utils.PgxIface
 }
 
-func NewStorage(pool *pgx.ConnPool) *Storage {
-	return &Storage{pool}
+func NewStorage(conn utils.PgxIface) *Storage {
+	return &Storage{conn}
 }
 
 func (s *Storage) CreateAccount(id int64) error {
-	_, err := s.pool.Exec(queryAddNewAccount, id)
+	query := `INSERT INTO balance (user_id, balance) VALUES($1, 0)`
+
+	transaction, err := s.db.Begin(context.Background())
+	defer func() {
+		if err != nil {
+			_ = transaction.Rollback(context.Background())
+		} else {
+			_ = transaction.Commit(context.Background())
+		}
+	}()
+
+	_, err = transaction.Exec(context.Background(), query, id)
 
 	return err
 }
 
 func (s *Storage) GetUserData(id int64) (*models.UserData, error) {
-	var balance float64
+	query := `SELECT balance FROM balance WHERE user_id = $1`
 
-	if err := s.pool.QueryRow(queryGetUserBalance, id).Scan(&balance); err != nil {
+	transaction, err := s.db.Begin(context.Background())
+	defer func() {
+		if err != nil {
+			_ = transaction.Rollback(context.Background())
+		} else {
+			_ = transaction.Commit(context.Background())
+		}
+	}()
+
+	var balance float64
+	if err = transaction.QueryRow(context.Background(), query, id).Scan(&balance); err != nil {
 		if err != pgx.ErrNoRows {
 			return nil, err
 		}
@@ -40,27 +56,69 @@ func (s *Storage) GetUserData(id int64) (*models.UserData, error) {
 	return &models.UserData{UserID: id, Balance: balance}, nil
 }
 
-func (s *Storage) MakeTransfer(senderID, receiverID int64, amount float64) error {
-	transaction, err := s.pool.Begin() // start transactions for safe money transfer
+func (s *Storage) GetTransferUsersData(senderID, receiverID int64) (*models.TransferUsersData, error) {
+	query := `SELECT user_id, balance FROM balance WHERE user_id = $1`
+
+	transaction, err := s.db.Begin(context.Background())
 	defer func() {
 		if err != nil {
-			_ = transaction.Rollback()
+			_ = transaction.Rollback(context.Background())
 		} else {
-			_ = transaction.Commit()
+			_ = transaction.Commit(context.Background())
 		}
 	}()
 
-	if _, err = transaction.Exec(queryUpdateBalance, amount*-1, senderID); err != nil {
+	transferUsers := &models.TransferUsersData{}
+	transferUsers.Sender = &models.UserData{}
+	transferUsers.Receiver = &models.UserData{}
+
+	// getting info about sender
+	if err = transaction.QueryRow(context.Background(), query, senderID).Scan(&transferUsers.Sender.UserID,
+		&transferUsers.Sender.Balance); err != nil {
+		if err != pgx.ErrNoRows {
+			return nil, err
+		}
+		transferUsers.Sender = nil
+		err = nil
+	}
+
+	// getting info about receiver
+	if err = transaction.QueryRow(context.Background(), query, receiverID).Scan(&transferUsers.Receiver.UserID,
+		&transferUsers.Receiver.Balance); err != nil {
+		if err != pgx.ErrNoRows {
+			return nil, err
+		}
+		transferUsers.Receiver = nil
+		err = nil
+	}
+
+	return transferUsers, nil
+}
+
+func (s *Storage) MakeTransfer(senderID, receiverID int64, amount float64) error {
+	queryUpdateBalance := `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
+	querySaveTransaction := `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
+
+	transaction, err := s.db.Begin(context.Background()) // start transactions for safe money transfer
+	defer func() {
+		if err != nil {
+			_ = transaction.Rollback(context.Background())
+		} else {
+			_ = transaction.Commit(context.Background())
+		}
+	}()
+
+	if _, err = transaction.Exec(context.Background(), queryUpdateBalance, amount*-1, senderID); err != nil {
 		return err
 	}
-	if _, err = transaction.Exec(queryUpdateBalance, amount, receiverID); err != nil {
+	if _, err = transaction.Exec(context.Background(), queryUpdateBalance, amount, receiverID); err != nil {
 		return err
 	}
-	if _, err = transaction.Exec(queryAddNewTransaction, fmt.Sprintf("Sent %.2fRUB to user %d", amount,
+	if _, err = transaction.Exec(context.Background(), querySaveTransaction, fmt.Sprintf("Sent %.2fRUB to user %d", amount,
 		receiverID), amount, senderID); err != nil {
 		return err
 	}
-	if _, err = transaction.Exec(queryAddNewTransaction, fmt.Sprintf("Recevied %.2fRUB from user %d", amount,
+	if _, err = transaction.Exec(context.Background(), querySaveTransaction, fmt.Sprintf("Recevied %.2fRUB from user %d", amount,
 		senderID), amount, receiverID); err != nil {
 		return err
 	}
@@ -69,17 +127,20 @@ func (s *Storage) MakeTransfer(senderID, receiverID int64, amount float64) error
 }
 
 func (s *Storage) UpdateBalance(id int64, amount float64) (float64, error) {
-	transaction, err := s.pool.Begin()
+	queryUpdateBalance := `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
+	querySaveTransaction := `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
+
+	transaction, err := s.db.Begin(context.Background())
 	defer func() {
 		if err != nil {
-			_ = transaction.Rollback()
+			_ = transaction.Rollback(context.Background())
 		} else {
-			_ = transaction.Commit()
+			_ = transaction.Commit(context.Background())
 		}
 	}()
 
 	var balance float64
-	if err = transaction.QueryRow(queryUpdateBalance, amount, id).Scan(&balance); err != nil {
+	if err = transaction.QueryRow(context.Background(), queryUpdateBalance, amount, id).Scan(&balance); err != nil {
 		return 0, err
 	}
 
@@ -91,7 +152,7 @@ func (s *Storage) UpdateBalance(id int64, amount float64) (float64, error) {
 		operationDescription = fmt.Sprintf("Add %.2fRUB", amount)
 	}
 
-	if _, err = transaction.Exec(queryAddNewTransaction, operationDescription, amount, id); err != nil {
+	if _, err = transaction.Exec(context.Background(), querySaveTransaction, operationDescription, amount, id); err != nil {
 		return 0, err
 	}
 

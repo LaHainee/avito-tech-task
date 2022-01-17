@@ -1,0 +1,223 @@
+basePath: /api/v1
+definitions:
+  models.RequestUpdateBalance:
+    properties:
+      amount:
+        type: number
+      operation_type:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - amount
+    type: object
+  models.ResponseMessage:
+    properties:
+      message:
+        type: string
+    type: object
+  models.Transaction:
+    properties:
+      amount:
+        type: number
+      created:
+        type: string
+      description:
+        type: string
+    type: object
+  models.Transactions:
+    items:
+      $ref: '#/definitions/models.Transaction'
+    type: array
+  models.TransactionsSelectionParams:
+    properties:
+      limit:
+        type: integer
+      order_amount:
+        type: boolean
+      order_date:
+        type: boolean
+      since:
+        type: string
+    type: object
+  models.TransferRequest:
+    properties:
+      amount:
+        example: 1000
+        type: number
+      receiver_id:
+        example: 2
+        type: integer
+      sender_id:
+        example: 1
+        type: integer
+    required:
+    - amount
+    - receiver_id
+    - sender_id
+    type: object
+  models.TransferUsersData:
+    properties:
+      receiver:
+        $ref: '#/definitions/models.UserData'
+        type: object
+      sender:
+        $ref: '#/definitions/models.UserData'
+        type: object
+    type: object
+  models.UserData:
+    properties:
+      balance:
+        type: number
+      user_id:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: API for BalanceApplication
+  license:
+    name: '""'
+  title: BalanceApplication
+  version: "1.0"
+paths:
+  /balance/{user_id}:
+    get:
+      parameters:
+      - description: User ID in BalanceApplication
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Currency to convert in
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserData'
+        "400":
+          description: Invalid user ID in query param
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "422":
+          description: Unsupported currency
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+      summary: Get user balance
+    post:
+      parameters:
+      - description: User ID in BalanceApplication
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Data for updating balance, operation = 0 - add money,operation
+          = 1 - write off money
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.RequestUpdateBalance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserData'
+        "400":
+          description: Invalid user ID in query param | invalid request body
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "422":
+          description: Not enough money | Not supported operation type | Amount field
+            is required | Negative user ID
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+      summary: Update user balance
+  /transactions/{user_id}:
+    post:
+      parameters:
+      - description: User ID in BalanceApplication
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Parameters for transactions selection
+        in: body
+        name: params
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransactionsSelectionParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Transactions'
+        "400":
+          description: Invalid user ID in query param | invalid body
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+      summary: Get list of user transactions
+  /transfer:
+    post:
+      parameters:
+      - description: Data for transferring money
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TransferUsersData'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "404":
+          description: Sender not found | receiver not found
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "422":
+          description: Not enough money
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ResponseMessage'
+      summary: Transfer money between users
+swagger: "2.0"
+x-extension-openapi:
+  example: value on a json format

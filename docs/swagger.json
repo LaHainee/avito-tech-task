@@ -1,0 +1,336 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for BalanceApplication",
+        "title": "BalanceApplication",
+        "contact": {},
+        "license": {
+            "name": "\"\""
+        },
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/balance/{user_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get user balance",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID in BalanceApplication",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Currency to convert in",
+                        "name": "currency",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID in query param",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unsupported currency",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Update user balance",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID in BalanceApplication",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data for updating balance, operation = 0 - add money,operation = 1 - write off money",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RequestUpdateBalance"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID in query param | invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Not enough money | Not supported operation type | Amount field is required | Negative user ID",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/{user_id}": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get list of user transactions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID in BalanceApplication",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters for transactions selection",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.TransactionsSelectionParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Transactions"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID in query param | invalid body",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/transfer": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Transfer money between users",
+                "parameters": [
+                    {
+                        "description": "Data for transferring money",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.TransferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.TransferUsersData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "404": {
+                        "description": "Sender not found | receiver not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Not enough money",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseMessage"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.RequestUpdateBalance": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "operation_type": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.ResponseMessage": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Transaction": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Transactions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/models.Transaction"
+            }
+        },
+        "models.TransactionsSelectionParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "order_amount": {
+                    "type": "boolean"
+                },
+                "order_date": {
+                    "type": "boolean"
+                },
+                "since": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TransferRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "receiver_id",
+                "sender_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 1000
+                },
+                "receiver_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "sender_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "models.TransferUsersData": {
+            "type": "object",
+            "properties": {
+                "receiver": {
+                    "type": "object",
+                    "$ref": "#/definitions/models.UserData"
+                },
+                "sender": {
+                    "type": "object",
+                    "$ref": "#/definitions/models.UserData"
+                }
+            }
+        },
+        "models.UserData": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "x-extension-openapi": {
+        "example": "value on a json format"
+    }
+}

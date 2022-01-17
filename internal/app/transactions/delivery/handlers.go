@@ -7,7 +7,6 @@ import (
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -28,14 +27,24 @@ func (h *Handlers) InitHandlers(server *echo.Echo) {
 	server.GET("/api/v1/transactions/:user_id", h.GetTransactions)
 }
 
+// GetTransactions
+// @Summary 	Get list of user transactions
+// @Produce 	json
+// @Param 		user_id path int true "User ID in BalanceApplication"
+// @Param 		params body models.TransactionsSelectionParams true "Parameters for transactions selection"
+// @Success 	200 {object} models.Transactions
+// @Failure		400 {object} models.ResponseMessage "Invalid user ID in query param | invalid body"
+// @Failure		404 {object} models.ResponseMessage "User not found"
+// @Failure		500 {object} models.ResponseMessage "Internal server error"
+// @Router 		/transactions/{user_id} [POST]
 func (h *Handlers) GetTransactions(ctx echo.Context) error {
 	h.logger.Info("Called handler GetTransactions for GET /api/v1/transactions/:user_id")
 
-	userID, err := strconv.ParseInt(ctx.Param("user_id"), 32, 64)
+	userID, err := strconv.ParseInt(ctx.Param("user_id"), 10, 64)
 	if err != nil {
 		h.logger.Warnf("Could not convert user id from string to int: %s", err)
 		return ctx.JSON(
-			http.StatusUnprocessableEntity,
+			http.StatusBadRequest,
 			&models.ResponseMessage{Message: constants.InvalidUserIDMessage})
 	}
 
@@ -43,11 +52,9 @@ func (h *Handlers) GetTransactions(ctx echo.Context) error {
 	if err = ctx.Bind(&params); err != nil {
 		h.logger.Warnf("Could not bind query params to models.TransactionsSelectionParams: %s", err)
 		return ctx.JSON(
-			http.StatusUnprocessableEntity,
+			http.StatusBadRequest,
 			&models.ResponseMessage{Message: constants.InvalidQueryParams})
 	}
-
-	log.Println(params)
 
 	transactions, err := h.service.GetUserTransactions(userID, &params)
 	if err != nil {
@@ -55,7 +62,7 @@ func (h *Handlers) GetTransactions(ctx echo.Context) error {
 		case createdErrors.ErrUserDoesNotExist:
 			h.logger.Warnf("Bad request: %s", err)
 			return ctx.JSON(
-				http.StatusBadRequest,
+				http.StatusNotFound,
 				&models.ResponseMessage{Message: err.Error()})
 		default:
 			h.logger.Errorf("Internal server error: %s", err)
@@ -65,6 +72,6 @@ func (h *Handlers) GetTransactions(ctx echo.Context) error {
 		}
 	}
 
-	h.logger.Info("Request was successfully processed, received response: %v", transactions)
+	h.logger.Infof("Request was successfully processed, received response: %v", transactions)
 	return ctx.JSON(http.StatusOK, transactions)
 }

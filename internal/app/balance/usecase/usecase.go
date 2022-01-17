@@ -6,16 +6,15 @@ import (
 	"avito-tech-task/internal/pkg/currency"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
-	"log"
 )
 
 type Service struct {
-	storage   balance.Storage
 	validator *utils.Validation
-	converter currency.Service
+	storage   balance.Storage
+	converter currency.ConverterIface
 }
 
-func NewService(storage balance.Storage, validator *utils.Validation, converter *currency.Converter) *Service {
+func NewService(storage balance.Storage, validator *utils.Validation, converter currency.ConverterIface) *Service {
 	return &Service{
 		storage:   storage,
 		validator: validator,
@@ -45,10 +44,9 @@ func (s *Service) GetBalance(id int64, currency string) (*models.UserData, error
 	return userData, nil
 }
 
-func (s *Service) MakeTransfer(data *models.TransferRequest) (*models.TransferResponse, error) {
+func (s *Service) MakeTransfer(data *models.TransferRequest) (*models.TransferUsersData, error) {
 	errors := s.validator.Validate(data) // validation
 	for _, err := range errors {
-		log.Println(err)
 		switch err.Field() {
 		case "SenderID":
 			return nil, createdErrors.ErrSenderIDisRequired
@@ -59,23 +57,18 @@ func (s *Service) MakeTransfer(data *models.TransferRequest) (*models.TransferRe
 		}
 	}
 
-	senderData, err := s.storage.GetUserData(data.SenderID) // get sender data
+	transferUsersData, err := s.storage.GetTransferUsersData(data.SenderID, data.ReceiverID)
 	if err != nil {
 		return nil, err
 	}
-	if senderData == nil {
+	if transferUsersData.Sender == nil { // check if sender exists
 		return nil, createdErrors.ErrSenderDoesNotExist
 	}
-
-	receiverData, err := s.storage.GetUserData(data.ReceiverID) // get receiver data
-	if err != nil {
-		return nil, err
-	}
-	if receiverData == nil {
+	if transferUsersData.Receiver == nil { // check if receiver exists
 		return nil, createdErrors.ErrReceiverDoesNotExist
 	}
 
-	if senderData.Balance < data.Amount {
+	if transferUsersData.Sender.Balance < data.Amount {
 		return nil, createdErrors.ErrNotEnoughMoney
 	}
 
@@ -83,24 +76,15 @@ func (s *Service) MakeTransfer(data *models.TransferRequest) (*models.TransferRe
 		return nil, err
 	}
 
-	response := &models.TransferResponse{
-		Sender: models.UserData{
-			UserID:  data.SenderID,
-			Balance: senderData.Balance - data.Amount,
-		},
-		Receiver: models.UserData{
-			UserID:  data.ReceiverID,
-			Balance: receiverData.Balance + data.Amount,
-		},
-	}
+	transferUsersData.Sender.Balance -= data.Amount
+	transferUsersData.Receiver.Balance += data.Amount
 
-	return response, nil
+	return transferUsersData, nil
 }
 
 func (s *Service) UpdateBalance(data *models.RequestUpdateBalance) (*models.UserData, error) {
 	errors := s.validator.Validate(data) // validation
 	for _, err := range errors {
-		log.Println(err)
 		switch err.Field() {
 		case "UserID":
 			return nil, createdErrors.ErrNegativeUserID
