@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ func NewLogger(config *config.Config) (*logrus.Logger, func() error) {
 		}
 	}
 	if !doesLogDirExist {
-		if	err := os.Mkdir(config.LoggingFilePath, 0777); err != nil {
+		if err := os.Mkdir(config.LoggingFilePath, 0750); err != nil {
 			logrus.Fatalf("Could not created directory %s: %s", config.LoggingFilePath, err)
 		}
 	}
@@ -40,7 +41,7 @@ func NewLogger(config *config.Config) (*logrus.Logger, func() error) {
 		time.Now().Minute(),
 		time.Now().Second()) + ".log"
 
-	file, err := os.OpenFile(config.LoggingFilePath+format, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(filepath.Clean(config.LoggingFilePath+format), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		logrus.Fatalf("Could not open file %s: %s", format, err)
 	}

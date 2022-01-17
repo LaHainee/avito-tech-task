@@ -1,14 +1,16 @@
 package usecase
 
 import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	storageMock "avito-tech-task/internal/app/balance/mock"
 	"avito-tech-task/internal/app/models"
 	converterMock "avito-tech-task/internal/pkg/currency/mock"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
-	"errors"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestService_GetBalance(t *testing.T) {
@@ -58,7 +60,7 @@ func TestService_GetBalance(t *testing.T) {
 			userID:   1,
 			currency: "USD",
 			storageMock: &storageMock.MockStorage{GetUserDataFunc: func(n int64) (*models.UserData, error) {
-				return nil, nil
+				return nil, createdErrors.ErrUserDoesNotExist
 			}},
 			expectedErr: true,
 			err:         createdErrors.ErrUserDoesNotExist,
@@ -157,7 +159,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			},
 			storageMock: &storageMock.MockStorage{
 				GetUserDataFunc: func(n int64) (*models.UserData, error) {
-					return nil, nil
+					return nil, createdErrors.ErrUserDoesNotExist
 				},
 				CreateAccountFunc: func(n int64) error {
 					return storageError
@@ -196,7 +198,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			},
 			storageMock: &storageMock.MockStorage{
 				GetUserDataFunc: func(n int64) (*models.UserData, error) {
-					return nil, nil
+					return nil, createdErrors.ErrUserDoesNotExist
 				},
 				CreateAccountFunc: func(n int64) error {
 					return nil

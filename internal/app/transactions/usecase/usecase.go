@@ -1,10 +1,11 @@
 package usecase
 
 import (
+	"strings"
+
 	"avito-tech-task/internal/app/models"
 	"avito-tech-task/internal/app/transactions"
 	createdErrors "avito-tech-task/internal/pkg/errors"
-	"strings"
 )
 
 type Service struct {
@@ -15,8 +16,8 @@ func NewService(storage transactions.Storage) *Service {
 	return &Service{storage}
 }
 
-func (s *Service) GetUserTransactions(id int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
-	doesUserExist, err := s.storage.DoesUserExist(id)
+func (s *Service) GetUserTransactions(userID int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
+	doesUserExist, err := s.storage.DoesUserExist(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,5 +32,5 @@ func (s *Service) GetUserTransactions(id int64, params *models.TransactionsSelec
 		params.Since = strings.Join(strings.Split(params.Since, " "), " +")
 	}
 
-	return s.storage.GetUserTransactions(id, params)
+	return s.storage.GetUserTransactions(userID, params)
 }

@@ -1,14 +1,16 @@
 package repository
 
 import (
-	"avito-tech-task/internal/app/models"
 	"errors"
-	"github.com/jackc/pgx/v4"
-	"github.com/pashagolub/pgxmock"
-	"github.com/stretchr/testify/assert"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/pashagolub/pgxmock"
+	"github.com/stretchr/testify/assert"
+
+	"avito-tech-task/internal/app/models"
 )
 
 func TestStorage_DoesUserExist(t *testing.T) {
@@ -16,7 +18,6 @@ func TestStorage_DoesUserExist(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	query := `SELECT user_id FROM balance WHERE user_id = $1`
 	storage := NewStorage(mock)
 	dbErr := errors.New("Error in database")
 
@@ -36,7 +37,7 @@ func TestStorage_DoesUserExist(t *testing.T) {
 				rows := pgxmock.NewRows([]string{"user_id"})
 				rows.AddRow(userID)
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUserID)).WithArgs(userID).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
 			expected: true,
@@ -47,7 +48,7 @@ func TestStorage_DoesUserExist(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnError(pgx.ErrNoRows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUserID)).WithArgs(userID).WillReturnError(pgx.ErrNoRows)
 				mock.ExpectCommit()
 			},
 			expected: false,
@@ -58,7 +59,7 @@ func TestStorage_DoesUserExist(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnError(dbErr)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUserID)).WithArgs(userID).WillReturnError(dbErr)
 				mock.ExpectRollback()
 			},
 			expectedErr: true,
@@ -114,7 +115,7 @@ func TestStorage_GetUserTransactions(t *testing.T) {
 			mock: func() {
 				var (
 					userID      int64   = 1
-					limit       int     = 10
+					limit               = 10
 					description         = "description"
 					amount      float64 = 1000
 					time                = timeNow
@@ -146,7 +147,7 @@ func TestStorage_GetUserTransactions(t *testing.T) {
 			mock: func() {
 				var (
 					userID int64 = 1
-					limit  int   = 10
+					limit        = 10
 				)
 				query := `SELECT description, amount, created FROM transactions WHERE user_id = $1 LIMIT NULLIF($2, 0)`
 				mock.ExpectBegin()

@@ -1,15 +1,16 @@
 package currency
 
 import (
-	"avito-tech-task/internal/pkg/constants"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"avito-tech-task/config"
+	"avito-tech-task/internal/pkg/constants"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 )
 
@@ -30,7 +31,7 @@ func NewConverter(config *config.Config, logger *logrus.Logger) *Converter {
 
 	currency.logger.Info("Initializing currency data")
 
-	resp, err := http.Get(currency.config.CurrencyApiURL)
+	resp, err := http.Get(currency.config.CurrencyAPIURL)
 	if err != nil {
 		currency.logger.Fatalf("Could not get actual currency data: %s", err)
 		return nil
@@ -63,7 +64,7 @@ func NewConverter(config *config.Config, logger *logrus.Logger) *Converter {
 func (c *Converter) Update() {
 	c.logger.Info("Updating currency data")
 
-	resp, err := http.Get(c.config.CurrencyApiURL)
+	resp, err := http.Get(c.config.CurrencyAPIURL)
 	if err != nil {
 		c.logger.Errorf("Could not get actual currency data: %s", err)
 		return

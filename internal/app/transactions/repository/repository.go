@@ -1,10 +1,13 @@
 package repository
 
 import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v4"
+
 	"avito-tech-task/internal/app/models"
 	"avito-tech-task/internal/pkg/utils"
-	"context"
-	"github.com/jackc/pgx/v4"
 )
 
 type Storage struct {
@@ -15,7 +18,12 @@ func NewStorage(pool utils.PgxIface) *Storage {
 	return &Storage{pool}
 }
 
-func (s *Storage) GetUserTransactions(id int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
+const (
+	queryGetUserID = `SELECT user_id FROM balance WHERE user_id = $1`
+)
+
+//nolint:cyclop
+func (s *Storage) GetUserTransactions(userID int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
 	var (
 		rows pgx.Rows
 		err  error
@@ -33,32 +41,44 @@ func (s *Storage) GetUserTransactions(id int64, params *models.TransactionsSelec
 	query := `SELECT description, amount, created FROM transactions WHERE user_id = $1 `
 
 	if params.Since == "" { // no filter by transaction time
-		if params.OrderAmount && params.OrderDate { // order by amount and time
-			query += `ORDER BY amount DESC, created DESC LIMIT NULLIF($2, 0)`
-		} else if params.OrderAmount { // order by amount
-			query += `ORDER BY amount DESC LIMIT NULLIF($2, 0)`
-		} else if params.OrderDate { // order by transaction time
-			query += `ORDER BY created DESC LIMIT NULLIF($2, 0)`
-		} else {
-			query += `LIMIT NULLIF($2, 0)`
+		switch params.OrderDate {
+		case true:
+			switch params.OrderAmount {
+			case true:
+				query += `ORDER BY amount DESC, created DESC LIMIT NULLIF($2, 0)`
+			case false:
+				query += `ORDER BY created DESC LIMIT NULLIF($2, 0)`
+			}
+		case false:
+			switch params.OrderAmount {
+			case true:
+				query += `ORDER BY amount DESC LIMIT NULLIF($2, 0)`
+			case false:
+				query += `LIMIT NULLIF($2, 0)`
+			}
 		}
-
-		rows, err = transaction.Query(context.Background(), query, id, params.Limit)
+		rows, err = transaction.Query(context.Background(), query, userID, params.Limit)
 		if err != nil {
 			return nil, err
 		}
 	} else { // since transaction time
-		if params.OrderAmount && params.OrderDate { // order by amount and time
-			query += `AND created <= $2 ORDER BY amount DESC, created DESC LIMIT NULLIF($3, 0)`
-		} else if params.OrderAmount { // order by amount
-			query += `AND created <= $2 ORDER BY amount DESC LIMIT NULLIF($3, 0)`
-		} else if params.OrderDate { // order by transaction time
-			query += `AND created <= $2 ORDER BY created DESC LIMIT NULLIF($3, 0)`
-		} else {
-			query += `AND created <= $2 LIMIT NULLIF($3, 0)`
+		switch params.OrderDate {
+		case true:
+			switch params.OrderAmount {
+			case true:
+				query += `AND created <= $2 ORDER BY amount DESC, created DESC LIMIT NULLIF($3, 0)`
+			case false:
+				query += `AND created <= $2 ORDER BY created DESC LIMIT NULLIF($3, 0)`
+			}
+		case false:
+			switch params.OrderAmount {
+			case true:
+				query += `AND created <= $2 ORDER BY amount DESC LIMIT NULLIF($3, 0)`
+			case false:
+				query += `AND created <= $2 LIMIT NULLIF($3, 0)`
+			}
 		}
-
-		rows, err = transaction.Query(context.Background(), query, id, params.Since, params.Limit)
+		rows, err = transaction.Query(context.Background(), query, userID, params.Since, params.Limit)
 		if err != nil {
 			return nil, err
 		}
@@ -77,9 +97,7 @@ func (s *Storage) GetUserTransactions(id int64, params *models.TransactionsSelec
 	return userTransactions, nil
 }
 
-func (s *Storage) DoesUserExist(id int64) (bool, error) {
-	query := `SELECT user_id FROM balance WHERE user_id = $1`
-
+func (s *Storage) DoesUserExist(userID int64) (bool, error) {
 	transaction, err := s.db.Begin(context.Background())
 	defer func() {
 		if err != nil {
@@ -89,8 +107,8 @@ func (s *Storage) DoesUserExist(id int64) (bool, error) {
 		}
 	}()
 
-	if err = transaction.QueryRow(context.Background(), query, id).Scan(&id); err != nil {
-		if err != pgx.ErrNoRows {
+	if err = transaction.QueryRow(context.Background(), queryGetUserID, userID).Scan(&userID); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
 			return false, err
 		}
 		err = nil

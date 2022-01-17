@@ -1,14 +1,17 @@
 package delivery
 
 import (
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
+
 	"avito-tech-task/internal/app/models"
 	"avito-tech-task/internal/app/transactions"
 	"avito-tech-task/internal/pkg/constants"
 	createdErrors "avito-tech-task/internal/pkg/errors"
-	"github.com/labstack/echo/v4"
-	"github.com/sirupsen/logrus"
-	"net/http"
-	"strconv"
 )
 
 type Handlers struct {
@@ -57,14 +60,14 @@ func (h *Handlers) GetTransactions(ctx echo.Context) error {
 	}
 
 	transactions, err := h.service.GetUserTransactions(userID, &params)
-	if err != nil {
-		switch err {
-		case createdErrors.ErrUserDoesNotExist:
-			h.logger.Warnf("Bad request: %s", err)
-			return ctx.JSON(
-				http.StatusNotFound,
-				&models.ResponseMessage{Message: err.Error()})
-		default:
+	switch errors.Is(err, createdErrors.ErrUserDoesNotExist) {
+	case true:
+		h.logger.Warnf("Bad request: %s", err)
+		return ctx.JSON(
+			http.StatusNotFound,
+			&models.ResponseMessage{Message: err.Error()})
+	case false:
+		if err != nil {
 			h.logger.Errorf("Internal server error: %s", err)
 			return ctx.JSON(
 				http.StatusInternalServerError,

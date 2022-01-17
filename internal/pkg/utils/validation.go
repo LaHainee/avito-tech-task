@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"avito-tech-task/internal/app/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
+
+	"avito-tech-task/internal/app/models"
 )
 
 type Validation struct {
@@ -21,8 +22,8 @@ func NewValidator() *Validation {
 }
 
 func (v *Validation) Validate(i interface{}) validator.ValidationErrors {
-	err := v.validate.Struct(i)
-	if err != nil {
+	if err := v.validate.Struct(i); err != nil {
+		//nolint:errorlint
 		return err.(validator.ValidationErrors)
 	}
 

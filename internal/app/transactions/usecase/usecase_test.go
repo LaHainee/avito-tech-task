@@ -1,13 +1,15 @@
 package usecase
 
 import (
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
 	"avito-tech-task/internal/app/models"
 	storageMock "avito-tech-task/internal/app/transactions/mock"
 	createdErrors "avito-tech-task/internal/pkg/errors"
-	"errors"
-	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestService_GetUserTransactions(t *testing.T) {

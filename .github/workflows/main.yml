@@ -1,0 +1,41 @@
+name: main
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+  linter:
+    name: Run linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run linter
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          go get github.com/golangci/golangci-lint/cmd/golangci-lint
+          make lint
+
+  tests:
+    needs: linter
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run all tests
+        run: make run-tests

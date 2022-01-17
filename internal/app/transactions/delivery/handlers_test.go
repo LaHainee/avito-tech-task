@@ -1,22 +1,24 @@
 package delivery
 
 import (
-	"avito-tech-task/config"
-	"avito-tech-task/internal/app/models"
-	"avito-tech-task/internal/app/transactions/mock"
-	"avito-tech-task/internal/pkg/constants"
-	createdErrors "avito-tech-task/internal/pkg/errors"
-	"avito-tech-task/internal/pkg/utils"
 	"encoding/json"
 	"errors"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
+
+	"avito-tech-task/config"
+	"avito-tech-task/internal/app/models"
+	"avito-tech-task/internal/app/transactions/mock"
+	"avito-tech-task/internal/pkg/constants"
+	createdErrors "avito-tech-task/internal/pkg/errors"
+	"avito-tech-task/internal/pkg/utils"
 )
 
 func TestHandlers_GetTransactions(t *testing.T) {
@@ -25,15 +27,15 @@ func TestHandlers_GetTransactions(t *testing.T) {
 	config := &config.Config{
 		LoggingLevel:    "debug",
 		LoggingFilePath: "./logs/",
-		CurrencyApiURL:  "",
+		CurrencyAPIURL:  "",
 		Server:          config.ServerConfig{},
 	}
-	logger, fileClose := utils.NewLogger(config)
-	defer func(close func() error) {
-		if err := close(); err != nil {
+	logger, closeF := utils.NewLogger(config)
+	defer func(closeF func() error) {
+		if err := closeF(); err != nil {
 			t.Errorf("Could not close file: %s", err)
 		}
-	}(fileClose)
+	}(closeF)
 	internalServerErr := errors.New("Internal server error")
 
 	if removeLogs {

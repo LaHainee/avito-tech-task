@@ -6,6 +6,7 @@ import (
 	"avito-tech-task/internal/pkg/currency"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
+	"errors"
 )
 
 type Service struct {
@@ -82,9 +83,10 @@ func (s *Service) MakeTransfer(data *models.TransferRequest) (*models.TransferUs
 	return transferUsersData, nil
 }
 
+//nolint:cyclop
 func (s *Service) UpdateBalance(data *models.RequestUpdateBalance) (*models.UserData, error) {
-	errors := s.validator.Validate(data) // validation
-	for _, err := range errors {
+	errs := s.validator.Validate(data) // validation
+	for _, err := range errs {
 		switch err.Field() {
 		case "UserID":
 			return nil, createdErrors.ErrNegativeUserID
@@ -97,15 +99,16 @@ func (s *Service) UpdateBalance(data *models.RequestUpdateBalance) (*models.User
 
 	userData, err := s.storage.GetUserData(data.UserID) // check if user exists
 	if err != nil {
-		return nil, err
-	}
-	if userData == nil { // user does not exist
-		if err = s.storage.CreateAccount(data.UserID); err != nil { // create account if user does not exist
+		switch errors.Is(err, createdErrors.ErrUserDoesNotExist) {
+		case true:
+			if err = s.storage.CreateAccount(data.UserID); err != nil { // create account if user does not exist
+				return nil, err
+			}
+			if data.OperationType == models.REDUCE { // trying to write off money from created account (balance = 0)
+				return nil, createdErrors.ErrNotEnoughMoney
+			}
+		case false:
 			return nil, err
-		}
-
-		if data.OperationType == models.REDUCE { // trying to write off money from created account (balance = 0)
-			return nil, createdErrors.ErrNotEnoughMoney
 		}
 	}
 

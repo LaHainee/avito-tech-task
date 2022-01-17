@@ -7,7 +7,7 @@ type ServerConfig struct {
 type Config struct {
 	LoggingLevel    string       `toml:"logging_level"`
 	LoggingFilePath string       `toml:"logging_file_path"`
-	CurrencyApiURL  string       `toml:"currency_api_url"`
+	CurrencyAPIURL  string       `toml:"currency_api_url"`
 	Server          ServerConfig `toml:"server"`
 }
 

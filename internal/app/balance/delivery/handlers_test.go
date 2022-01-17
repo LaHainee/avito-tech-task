@@ -1,21 +1,23 @@
 package delivery
 
 import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
+
 	"avito-tech-task/config"
 	"avito-tech-task/internal/app/balance/mock"
 	"avito-tech-task/internal/app/models"
 	"avito-tech-task/internal/pkg/constants"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
-	"encoding/json"
-	"errors"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestHandlers_GetBalance(t *testing.T) {
@@ -24,16 +26,16 @@ func TestHandlers_GetBalance(t *testing.T) {
 	config := &config.Config{
 		LoggingLevel:    "debug",
 		LoggingFilePath: "./logs/",
-		CurrencyApiURL:  "",
+		CurrencyAPIURL:  "",
 		Server:          config.ServerConfig{},
 	}
-	logger, fileClose := utils.NewLogger(config)
-	defer func(close func() error) {
-		if err := close(); err != nil {
+
+	logger, closeF := utils.NewLogger(config)
+	defer func(closeF func() error) {
+		if err := closeF(); err != nil {
 			t.Errorf("Could not close file: %s", err)
 		}
-	}(fileClose)
-	internalServerErr := errors.New("Internal server error")
+	}(closeF)
 
 	if removeLogs {
 		defer func() {
@@ -43,6 +45,7 @@ func TestHandlers_GetBalance(t *testing.T) {
 		}()
 	}
 
+	internalServerErr := errors.New("Internal server error")
 	tests := []struct {
 		name           string
 		serviceMock    *mock.MockService
@@ -136,16 +139,16 @@ func TestHandlers_UpdateBalance(t *testing.T) {
 	config := &config.Config{
 		LoggingLevel:    "debug",
 		LoggingFilePath: "./logs/",
-		CurrencyApiURL:  "",
+		CurrencyAPIURL:  "",
 		Server:          config.ServerConfig{},
 	}
-	logger, fileClose := utils.NewLogger(config)
-	defer func(close func() error) {
-		if err := close(); err != nil {
+
+	logger, closeF := utils.NewLogger(config)
+	defer func(closeF func() error) {
+		if err := closeF(); err != nil {
 			t.Errorf("Could not close file: %s", err)
 		}
-	}(fileClose)
-	internalServerErr := errors.New("Internal server error")
+	}(closeF)
 
 	if removeLogs {
 		defer func() {
@@ -155,6 +158,7 @@ func TestHandlers_UpdateBalance(t *testing.T) {
 		}()
 	}
 
+	internalServerErr := errors.New("Internal server error")
 	tests := []struct {
 		name           string
 		serviceMock    *mock.MockService
@@ -244,16 +248,16 @@ func TestHandlers_Transfer(t *testing.T) {
 	config := &config.Config{
 		LoggingLevel:    "debug",
 		LoggingFilePath: "./logs/",
-		CurrencyApiURL:  "",
+		CurrencyAPIURL:  "",
 		Server:          config.ServerConfig{},
 	}
-	logger, fileClose := utils.NewLogger(config)
-	defer func(close func() error) {
-		if err := close(); err != nil {
+
+	logger, closeF := utils.NewLogger(config)
+	defer func(closeF func() error) {
+		if err := closeF(); err != nil {
 			t.Errorf("Could not close file: %s", err)
 		}
-	}(fileClose)
-	internalServerErr := errors.New("Internal server error")
+	}(closeF)
 
 	if removeLogs {
 		defer func() {
@@ -263,6 +267,7 @@ func TestHandlers_Transfer(t *testing.T) {
 		}()
 	}
 
+	internalServerErr := errors.New("Internal server error")
 	tests := []struct {
 		name           string
 		serviceMock    *mock.MockService

@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -28,7 +29,7 @@ func (h *Handlers) InitHandlers(server *echo.Echo) {
 	server.POST("/api/v1/balance/:user_id", h.UpdateBalance)
 	server.POST("/api/v1/transfer", h.Transfer)
 
-	server.GET(" ", h.GetBalance)
+	server.GET("/api/v1/balance/:user_id", h.GetBalance)
 }
 
 // Transfer
@@ -55,22 +56,26 @@ func (h *Handlers) Transfer(ctx echo.Context) error {
 
 	transferResult, err := h.service.MakeTransfer(&transferData)
 	if err != nil {
-		switch err {
-		case createdErrors.ErrNotEnoughMoney:
+		switch errors.Is(err, createdErrors.ErrNotEnoughMoney) {
+		case true:
 			h.logger.Warnf("Unprocesseable request: %s", err)
 			return ctx.JSON(
 				http.StatusUnprocessableEntity,
 				&models.ResponseMessage{Message: err.Error()})
-		case createdErrors.ErrSenderDoesNotExist, createdErrors.ErrReceiverDoesNotExist:
-			h.logger.Warnf("%s", err)
-			return ctx.JSON(
-				http.StatusNotFound,
-				&models.ResponseMessage{Message: err.Error()})
 		default:
-			h.logger.Errorf("Internal server error: %s", err)
-			return ctx.JSON(
-				http.StatusInternalServerError,
-				&models.ResponseMessage{Message: err.Error()})
+			switch errors.Is(err, createdErrors.ErrSenderDoesNotExist) ||
+				errors.Is(err, createdErrors.ErrReceiverDoesNotExist) {
+			case true:
+				h.logger.Warnf("%s", err)
+				return ctx.JSON(
+					http.StatusNotFound,
+					&models.ResponseMessage{Message: err.Error()})
+			default:
+				h.logger.Errorf("Internal server error: %s", err)
+				return ctx.JSON(
+					http.StatusInternalServerError,
+					&models.ResponseMessage{Message: err.Error()})
+			}
 		}
 	}
 
@@ -104,23 +109,26 @@ func (h *Handlers) GetBalance(ctx echo.Context) error {
 	h.logger.Infof("Request data: userID: %d, currency: %s", userID, currency)
 
 	balance, err := h.service.GetBalance(userID, currency)
-	if err != nil {
-		switch err {
-		case createdErrors.ErrNotSupportedCurrency:
-			h.logger.Warnf("Bad request: %s", err)
-			return ctx.JSON(
-				http.StatusUnprocessableEntity,
-				&models.ResponseMessage{Message: err.Error()})
-		case createdErrors.ErrUserDoesNotExist:
+	switch errors.Is(err, createdErrors.ErrNotSupportedCurrency) {
+	case true:
+		h.logger.Warnf("Bad request: %s", err)
+		return ctx.JSON(
+			http.StatusUnprocessableEntity,
+			&models.ResponseMessage{Message: err.Error()})
+	case false:
+		switch errors.Is(err, createdErrors.ErrUserDoesNotExist) {
+		case true:
 			h.logger.Warnf("%s", err)
 			return ctx.JSON(
 				http.StatusNotFound,
 				&models.ResponseMessage{Message: err.Error()})
-		default:
-			h.logger.Errorf("Internal server error: %s", err)
-			return ctx.JSON(
-				http.StatusInternalServerError,
-				&models.ResponseMessage{Message: err.Error()})
+		case false:
+			if err != nil {
+				h.logger.Errorf("Internal server error: %s", err)
+				return ctx.JSON(
+					http.StatusInternalServerError,
+					&models.ResponseMessage{Message: err.Error()})
+			}
 		}
 	}
 
@@ -151,20 +159,17 @@ func (h *Handlers) UpdateBalance(ctx echo.Context) error {
 	h.logger.Infof("Request data: %v", updateData)
 
 	userData, err := h.service.UpdateBalance(&updateData)
-	if err != nil {
-		switch err {
-		case createdErrors.ErrNotEnoughMoney, createdErrors.ErrNotSupportedOperationType,
-			createdErrors.ErrAmountFiledIsRequired, createdErrors.ErrNegativeUserID:
-			h.logger.Warnf("Bad request: %s", err)
-			return ctx.JSON(
-				http.StatusUnprocessableEntity,
-				&models.ResponseMessage{Message: err.Error()})
-		default:
-			h.logger.Errorf("Internal server error: %s", err)
-			return ctx.JSON(
-				http.StatusInternalServerError,
-				&models.ResponseMessage{Message: err.Error()})
-		}
+	if errors.Is(err, createdErrors.ErrNotEnoughMoney) || errors.Is(err, createdErrors.ErrNotSupportedOperationType) ||
+		errors.Is(err, createdErrors.ErrAmountFiledIsRequired) || errors.Is(err, createdErrors.ErrNegativeUserID) {
+		h.logger.Warnf("Bad request: %s", err)
+		return ctx.JSON(
+			http.StatusUnprocessableEntity,
+			&models.ResponseMessage{Message: err.Error()})
+	} else if err != nil {
+		h.logger.Errorf("Internal server error: %s", err)
+		return ctx.JSON(
+			http.StatusInternalServerError,
+			&models.ResponseMessage{Message: err.Error()})
 	}
 
 	h.logger.Infof("Request was successfully processed, received response: %v", userData)

@@ -1,14 +1,17 @@
 package repository
 
 import (
-	"avito-tech-task/internal/app/models"
+	createdErrors "avito-tech-task/internal/pkg/errors"
 	"errors"
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/jackc/pgx/v4"
 	"github.com/pashagolub/pgxmock"
 	"github.com/stretchr/testify/assert"
-	"regexp"
-	"testing"
+
+	"avito-tech-task/internal/app/models"
 )
 
 func TestStorage_GetUserData(t *testing.T) {
@@ -16,7 +19,6 @@ func TestStorage_GetUserData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	query := `SELECT balance FROM balance WHERE user_id = $1`
 	storage := NewStorage(mock)
 	dbErr := errors.New("Error in database")
 
@@ -39,7 +41,7 @@ func TestStorage_GetUserData(t *testing.T) {
 				rows := pgxmock.NewRows([]string{"balance"})
 				rows.AddRow(balance)
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetBalance)).WithArgs(userID).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
 			expected: &models.UserData{
@@ -53,9 +55,11 @@ func TestStorage_GetUserData(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnError(pgx.ErrNoRows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetBalance)).WithArgs(userID).WillReturnError(pgx.ErrNoRows)
 				mock.ExpectRollback()
 			},
+			expectedErr: true,
+			err:         createdErrors.ErrUserDoesNotExist,
 		},
 		{
 			name:   "Error in database",
@@ -63,7 +67,7 @@ func TestStorage_GetUserData(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnError(dbErr)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetBalance)).WithArgs(userID).WillReturnError(dbErr)
 				mock.ExpectRollback()
 			},
 			expectedErr: true,
@@ -94,7 +98,6 @@ func TestStorage_CreateAccount(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	query := `INSERT INTO balance (user_id, balance) VALUES($1, 0)`
 	storage := NewStorage(mock)
 	dbErr := errors.New("Error in database")
 
@@ -111,7 +114,7 @@ func TestStorage_CreateAccount(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(userID).
+				mock.ExpectExec(regexp.QuoteMeta(queryInsertBalance)).WithArgs(userID).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 				mock.ExpectCommit()
 			},
@@ -122,7 +125,7 @@ func TestStorage_CreateAccount(t *testing.T) {
 			mock: func() {
 				var userID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(userID).WillReturnError(dbErr)
+				mock.ExpectExec(regexp.QuoteMeta(queryInsertBalance)).WithArgs(userID).WillReturnError(dbErr)
 				mock.ExpectRollback()
 			},
 			expectedErr: true,
@@ -151,8 +154,6 @@ func TestStorage_UpdateBalance(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	queryUpdateBalance := `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
-	querySaveTransaction := `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
 	storage := NewStorage(mock)
 	dbErr := errors.New("Error in database")
 
@@ -174,7 +175,7 @@ func TestStorage_UpdateBalance(t *testing.T) {
 					userID         int64   = 1
 					amount         float64 = 1000
 					updatedBalance float64 = 2000
-					description    string  = fmt.Sprintf("Add %.2fRUB", amount)
+					description            = fmt.Sprintf("Add %.2fRUB", amount)
 				)
 				rows := pgxmock.NewRows([]string{"balance"})
 				rows.AddRow(updatedBalance)
@@ -211,8 +212,8 @@ func TestStorage_UpdateBalance(t *testing.T) {
 				var (
 					userID         int64   = 1
 					amount         float64 = -1000
-					updatedBalance float64 = 0
-					description    string  = fmt.Sprintf("Write off %.2fRUB", amount*-1)
+					updatedBalance float64
+					description    = fmt.Sprintf("Write off %.2fRUB", amount*-1)
 				)
 				rows := pgxmock.NewRows([]string{"balance"})
 				rows.AddRow(updatedBalance)
@@ -251,8 +252,6 @@ func TestStorage_MakeTransfer(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	queryUpdateBalance := `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
-	querySaveTransaction := `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
 	storage := NewStorage(mock)
 	dbErr := errors.New("Error in database")
 
@@ -423,7 +422,6 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
-	query := `SELECT user_id, balance FROM balance WHERE user_id = $1`
 	storage := NewStorage(mock)
 	dbError := errors.New("Error in database")
 
@@ -450,10 +448,10 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 				mock.ExpectBegin()
 				rows := pgxmock.NewRows([]string{"user_id", "balance"})
 				rows.AddRow(senderID, senderBalance)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(senderID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(senderID).WillReturnRows(rows)
 				rows = pgxmock.NewRows([]string{"user_id", "balance"})
 				rows.AddRow(receiverID, receiverBalance)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(receiverID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(receiverID).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
 			expected: &models.TransferUsersData{
@@ -478,10 +476,10 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 					receiverBalance float64 = 1000
 				)
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(senderID).WillReturnError(pgx.ErrNoRows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(senderID).WillReturnError(pgx.ErrNoRows)
 				rows := pgxmock.NewRows([]string{"user_id", "balance"})
 				rows.AddRow(receiverID, receiverBalance)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(receiverID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(receiverID).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
 			expected: &models.TransferUsersData{
@@ -505,8 +503,8 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 				mock.ExpectBegin()
 				rows := pgxmock.NewRows([]string{"user_id", "balance"})
 				rows.AddRow(senderID, senderBalance)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(senderID).WillReturnRows(rows)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(receiverID).WillReturnError(pgx.ErrNoRows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(senderID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(receiverID).WillReturnError(pgx.ErrNoRows)
 				mock.ExpectCommit()
 			},
 			expected: &models.TransferUsersData{
@@ -518,20 +516,20 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 			},
 		},
 		{
-			name:       "Error in database occured during getting data about sender",
+			name:       "Error in database occurred during getting data about sender",
 			senderID:   1,
 			receiverID: 2,
 			mock: func() {
 				var senderID int64 = 1
 				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(senderID).WillReturnError(dbError)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(senderID).WillReturnError(dbError)
 				mock.ExpectRollback()
 			},
 			expectedErr: true,
 			err:         dbError,
 		},
 		{
-			name:       "Error in database occured during getting data about receiver",
+			name:       "Error in database occurred during getting data about receiver",
 			senderID:   1,
 			receiverID: 2,
 			mock: func() {
@@ -543,8 +541,8 @@ func TestStorage_GetTransferUsersData(t *testing.T) {
 				mock.ExpectBegin()
 				rows := pgxmock.NewRows([]string{"user_id", "balance"})
 				rows.AddRow(senderID, senderBalance)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(senderID).WillReturnRows(rows)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(receiverID).WillReturnError(dbError)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(senderID).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(queryGetUser)).WithArgs(receiverID).WillReturnError(dbError)
 				mock.ExpectRollback()
 			},
 			expectedErr: true,

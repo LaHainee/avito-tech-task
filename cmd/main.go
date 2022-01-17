@@ -1,15 +1,15 @@
 package main
 
 import (
-	"avito-tech-task/internal/pkg/currency"
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/BurntSushi/toml"
 	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"avito-tech-task/config"
 	deliveryBalance "avito-tech-task/internal/app/balance/delivery"
@@ -19,6 +19,7 @@ import (
 	repositoryTransactions "avito-tech-task/internal/app/transactions/repository"
 	usecaseTransactions "avito-tech-task/internal/app/transactions/usecase"
 	"avito-tech-task/internal/pkg/constants"
+	"avito-tech-task/internal/pkg/currency"
 	"avito-tech-task/internal/pkg/utils"
 )
 
@@ -27,7 +28,7 @@ type Handlers struct {
 	TransactionsHandlers deliveryTransactions.Handlers
 }
 
-func NewHandlers(conn utils.PgxIface , logger *logrus.Logger, validator *utils.Validation, converter *currency.Converter) *Handlers {
+func NewHandlers(conn utils.PgxIface, logger *logrus.Logger, validator *utils.Validation, converter *currency.Converter) *Handlers {
 	balanceStorage := repositoryBalance.NewStorage(conn)
 	balanceService := usecaseBalance.NewService(balanceStorage, validator, converter)
 	balanceHandlers := deliveryBalance.NewHandlers(balanceService, logger)
@@ -68,12 +69,12 @@ func main() {
 		}
 	}(conn, context.Background())
 
-	logger, fileClose := utils.NewLogger(config)
-	defer func(close func() error) {
-		if err := close(); err != nil {
+	logger, closeF := utils.NewLogger(config)
+	defer func(closeF func() error) {
+		if err := closeF(); err != nil {
 			logrus.Fatalf("Could not close file: %s", err)
 		}
-	}(fileClose)
+	}(closeF)
 
 	validator := utils.NewValidator()
 
@@ -90,9 +91,8 @@ func main() {
 	cancel := make(chan struct{})
 	go currency.UpdateCurrency(converter, cancel)
 
-	done := make(chan os.Signal)
+	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	signal.Notify(done, os.Kill)
 	<-done
 	cancel <- struct{}{}
 }
