@@ -54,7 +54,7 @@ func NewHandlers(conn utils.PgxIface, logger *logrus.Logger, validator *utils.Va
 // @x-extension-openapi  {"example": "value on a json format"}
 
 func main() {
-	//TODO добавить валидацию на поле limit в транзакциях
+	// TODO добавить валидацию на поле limit в транзакциях
 
 	server := echo.New()
 
