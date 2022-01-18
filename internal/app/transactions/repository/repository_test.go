@@ -19,8 +19,8 @@ func TestStorage_DoesUserExist(t *testing.T) {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
 	storage := NewStorage(mock)
-	dbErr := errors.New("Error in database")
 
+	dbErr := errors.New("Error in database")
 	tests := []struct {
 		name        string
 		userID      int64
@@ -91,9 +91,9 @@ func TestStorage_GetUserTransactions(t *testing.T) {
 		t.Errorf("Could not mock database connection: %s", err)
 	}
 	storage := NewStorage(mock)
-	dbErr := errors.New("Error in database")
 
 	timeNow := time.Now()
+	dbErr := errors.New("Error in database")
 	tests := []struct {
 		name        string
 		userID      int64
@@ -107,31 +107,34 @@ func TestStorage_GetUserTransactions(t *testing.T) {
 			name:   "Successfully get transactions list",
 			userID: 1,
 			params: &models.TransactionsSelectionParams{
-				Limit:       10,
-				Since:       "",
-				OrderAmount: false,
-				OrderDate:   false,
+				Limit:         10,
+				OperationType: 1,
+				Since:         "",
+				OrderAmount:   false,
+				OrderDate:     false,
 			},
 			mock: func() {
 				var (
-					userID      int64   = 1
+					userID        int64 = 1
 					limit               = 10
-					description         = "description"
-					amount      float64 = 1000
-					time                = timeNow
+					operationType       = "add"
+					receiver      int64
+					amount        float64 = 1000
+					created               = timeNow
 				)
-				query := `SELECT description, amount, created FROM transactions WHERE user_id = $1 LIMIT NULLIF($2, 0)`
-				rows := pgxmock.NewRows([]string{"description", "amount", "created"})
-				rows.AddRow(description, amount, time)
+				query := `SELECT operation_type, receiver, amount, created FROM transactions WHERE sender = $1 
+				AND operation_type = 'add' LIMIT NULLIF($2, 0)`
+				rows := pgxmock.NewRows([]string{"operation_type", "receiver", "amount", "created"})
+				rows.AddRow(operationType, receiver, amount, created)
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID, limit).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
 			expected: models.Transactions{
 				&models.Transaction{
-					Description: "description",
-					Amount:      1000,
-					Created:     timeNow,
+					OperationType: "add",
+					Amount:        1000,
+					Created:       timeNow,
 				},
 			},
 		},
@@ -139,17 +142,19 @@ func TestStorage_GetUserTransactions(t *testing.T) {
 			name:   "Error in database",
 			userID: 1,
 			params: &models.TransactionsSelectionParams{
-				Limit:       10,
-				Since:       "",
-				OrderAmount: false,
-				OrderDate:   false,
+				Limit:         10,
+				OperationType: 1,
+				Since:         "",
+				OrderAmount:   false,
+				OrderDate:     false,
 			},
 			mock: func() {
 				var (
 					userID int64 = 1
 					limit        = 10
 				)
-				query := `SELECT description, amount, created FROM transactions WHERE user_id = $1 LIMIT NULLIF($2, 0)`
+				query := `SELECT operation_type, receiver, amount, created FROM transactions WHERE sender = $1 
+				AND operation_type = 'add' LIMIT NULLIF($2, 0)`
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(userID, limit).WillReturnError(dbErr)
 				mock.ExpectRollback()

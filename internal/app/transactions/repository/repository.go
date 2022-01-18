@@ -1,9 +1,10 @@
 package repository
 
 import (
+	"avito-tech-task/internal/pkg/constants"
 	"context"
+	"database/sql"
 	"errors"
-
 	"github.com/jackc/pgx/v4"
 
 	"avito-tech-task/internal/app/models"
@@ -38,7 +39,16 @@ func (s *Storage) GetUserTransactions(userID int64, params *models.TransactionsS
 		}
 	}()
 
-	query := `SELECT description, amount, created FROM transactions WHERE user_id = $1 `
+	query := `SELECT operation_type, receiver, amount, created FROM transactions WHERE sender = $1 `
+
+	switch params.OperationType {
+	case constants.ADD:
+		query += `AND operation_type = 'add' `
+	case constants.REDUCE:
+		query += `AND operation_type = 'write_off' `
+	case constants.TRANSFER:
+		query += `AND operation_type = 'transfer' `
+	}
 
 	if params.Since == "" { // no filter by transaction time
 		switch params.OrderDate {
@@ -86,10 +96,18 @@ func (s *Storage) GetUserTransactions(userID int64, params *models.TransactionsS
 	defer rows.Close()
 
 	userTransactions := models.Transactions{}
+	var receiver sql.NullInt64
 	for rows.Next() {
 		var userTransaction models.Transaction
-		if err = rows.Scan(&userTransaction.Description, &userTransaction.Amount, &userTransaction.Created); err != nil {
+		if err = rows.Scan(&userTransaction.OperationType, &receiver, &userTransaction.Amount,
+			&userTransaction.Created); err != nil {
 			return nil, err
+		}
+
+		if receiver.Valid {
+			userTransaction.ReceiverID = receiver.Int64
+		} else {
+			userTransaction.ReceiverID = 0
 		}
 		userTransactions = append(userTransactions, &userTransaction)
 	}

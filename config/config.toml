@@ -4,4 +4,4 @@ logging_file_path = "./logs/"
 currency_api_url = "http://www.cbr-xml-daily.ru/latest.js"
 
 [server]
-database_conn_string = "dbname=balance sslmode=disable"
+database_conn_string = "user=lahaine password=dbpass host=postgres port=5432 dbname=balance sslmode=disable"

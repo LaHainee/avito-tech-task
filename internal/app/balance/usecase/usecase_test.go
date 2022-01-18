@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	converterMock "avito-tech-task/internal/pkg/currency/mock"
 	"errors"
 	"testing"
 
@@ -8,7 +9,6 @@ import (
 
 	storageMock "avito-tech-task/internal/app/balance/mock"
 	"avito-tech-task/internal/app/models"
-	converterMock "avito-tech-task/internal/pkg/currency/mock"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
 )
@@ -116,7 +116,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Successfully updated balance",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 0,
+				OperationType: 1,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -139,7 +139,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Error in storage, GetUserData",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 0,
+				OperationType: 1,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -154,7 +154,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Error in storage, CreateAccount",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 0,
+				OperationType: 1,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -172,7 +172,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Error in storage, UpdateBalance",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 1,
+				OperationType: 2,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -193,7 +193,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Write off money from created account with zero balance",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 1,
+				OperationType: 2,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -211,7 +211,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Not enough money to write off",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 1,
+				OperationType: 2,
 				Amount:        1000,
 			},
 			storageMock: &storageMock.MockStorage{
@@ -229,7 +229,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Negative user ID",
 			data: &models.RequestUpdateBalance{
 				UserID:        -1,
-				OperationType: 0,
+				OperationType: 1,
 				Amount:        1000,
 			},
 			expectedErr: true,
@@ -249,7 +249,7 @@ func TestService_UpdateBalance(t *testing.T) {
 			name: "Field amount is empty",
 			data: &models.RequestUpdateBalance{
 				UserID:        1,
-				OperationType: 1,
+				OperationType: 2,
 			},
 			expectedErr: true,
 			err:         createdErrors.ErrAmountFiledIsRequired,

@@ -3,7 +3,6 @@ package repository
 import (
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"errors"
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -175,14 +174,14 @@ func TestStorage_UpdateBalance(t *testing.T) {
 					userID         int64   = 1
 					amount         float64 = 1000
 					updatedBalance float64 = 2000
-					description            = fmt.Sprintf("Add %.2fRUB", amount)
+					operationType          = "add"
 				)
 				rows := pgxmock.NewRows([]string{"balance"})
 				rows.AddRow(updatedBalance)
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount, userID).
 					WillReturnRows(rows)
-				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).WithArgs(description, amount, userID).
+				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).WithArgs(operationType, userID, 0, amount).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 				mock.ExpectCommit()
 			},
@@ -213,14 +212,14 @@ func TestStorage_UpdateBalance(t *testing.T) {
 					userID         int64   = 1
 					amount         float64 = -1000
 					updatedBalance float64
-					description    = fmt.Sprintf("Write off %.2fRUB", amount*-1)
+					operationType  = "write_off"
 				)
 				rows := pgxmock.NewRows([]string{"balance"})
 				rows.AddRow(updatedBalance)
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount, userID).
 					WillReturnRows(rows)
-				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).WithArgs(description, amount*-1, userID).
+				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).WithArgs(operationType, userID, 0, amount*-1).
 					WillReturnError(dbErr)
 				mock.ExpectRollback()
 			},
@@ -271,9 +270,10 @@ func TestStorage_MakeTransfer(t *testing.T) {
 			amount:     1000,
 			mock: func() {
 				var (
-					senderID   int64   = 1
-					receiverID int64   = 2
-					amount     float64 = 1000
+					senderID      int64   = 1
+					receiverID    int64   = 2
+					amount        float64 = 1000
+					operationType         = "transfer"
 				)
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount*-1, senderID).
@@ -281,18 +281,7 @@ func TestStorage_MakeTransfer(t *testing.T) {
 				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount, receiverID).
 					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).
-					WithArgs(
-						fmt.Sprintf("Sent %.2fRUB to user %d", amount, receiverID),
-						amount,
-						senderID,
-					).
-					WillReturnResult(pgxmock.NewResult("INSERT", 1))
-				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).
-					WithArgs(
-						fmt.Sprintf("Recevied %.2fRUB from user %d", amount, senderID),
-						amount,
-						receiverID,
-					).
+					WithArgs(operationType, senderID, receiverID, amount).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 				mock.ExpectCommit()
 			},
@@ -343,9 +332,10 @@ func TestStorage_MakeTransfer(t *testing.T) {
 			amount:     1000,
 			mock: func() {
 				var (
-					senderID   int64   = 1
-					receiverID int64   = 2
-					amount     float64 = 1000
+					senderID      int64   = 1
+					receiverID    int64   = 2
+					amount        float64 = 1000
+					operationType         = "transfer"
 				)
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount*-1, senderID).
@@ -353,46 +343,7 @@ func TestStorage_MakeTransfer(t *testing.T) {
 				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount, receiverID).
 					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).
-					WithArgs(
-						fmt.Sprintf("Sent %.2fRUB to user %d", amount, receiverID),
-						amount,
-						senderID,
-					).
-					WillReturnError(dbErr)
-				mock.ExpectRollback()
-			},
-			expectedErr: true,
-			err:         dbErr,
-		},
-		{
-			name:       "Error in database during saving receiver transaction",
-			senderID:   1,
-			receiverID: 2,
-			amount:     1000,
-			mock: func() {
-				var (
-					senderID   int64   = 1
-					receiverID int64   = 2
-					amount     float64 = 1000
-				)
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount*-1, senderID).
-					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBalance)).WithArgs(amount, receiverID).
-					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).
-					WithArgs(
-						fmt.Sprintf("Sent %.2fRUB to user %d", amount, receiverID),
-						amount,
-						senderID,
-					).
-					WillReturnResult(pgxmock.NewResult("INSERT", 1))
-				mock.ExpectExec(regexp.QuoteMeta(querySaveTransaction)).
-					WithArgs(
-						fmt.Sprintf("Recevied %.2fRUB from user %d", amount, senderID),
-						amount,
-						receiverID,
-					).
+					WithArgs(operationType, senderID, receiverID, amount).
 					WillReturnError(dbErr)
 				mock.ExpectRollback()
 			},

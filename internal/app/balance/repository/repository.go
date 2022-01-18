@@ -4,8 +4,6 @@ import (
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"context"
 	"errors"
-	"fmt"
-
 	"github.com/jackc/pgx/v4"
 
 	"avito-tech-task/internal/app/models"
@@ -22,10 +20,12 @@ func NewStorage(conn utils.PgxIface) *Storage {
 
 const (
 	queryUpdateBalance   = `UPDATE balance SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`
-	querySaveTransaction = `INSERT INTO transactions(description, amount, user_id) VALUES ($1, $2, $3)`
-	queryGetBalance      = `SELECT balance FROM balance WHERE user_id = $1`
-	queryInsertBalance   = `INSERT INTO balance (user_id, balance) VALUES($1, 0)`
-	queryGetUser         = `SELECT user_id, balance FROM balance WHERE user_id = $1`
+	querySaveTransaction = `
+		INSERT INTO transactions(operation_type, sender, receiver, amount)
+		VALUES ($1, $2, NULLIF($3, 0), $4)`
+	queryGetBalance    = `SELECT balance FROM balance WHERE user_id = $1`
+	queryInsertBalance = `INSERT INTO balance (user_id, balance) VALUES($1, 0)`
+	queryGetUser       = `SELECT user_id, balance FROM balance WHERE user_id = $1`
 )
 
 func (s *Storage) CreateAccount(userID int64) error {
@@ -117,12 +117,8 @@ func (s *Storage) MakeTransfer(senderID, receiverID int64, amount float64) error
 	if _, err = transaction.Exec(context.Background(), queryUpdateBalance, amount, receiverID); err != nil {
 		return err
 	}
-	if _, err = transaction.Exec(context.Background(), querySaveTransaction, fmt.Sprintf("Sent %.2fRUB to user %d", amount,
-		receiverID), amount, senderID); err != nil {
-		return err
-	}
-	if _, err = transaction.Exec(context.Background(), querySaveTransaction, fmt.Sprintf("Recevied %.2fRUB from user %d", amount,
-		senderID), amount, receiverID); err != nil {
+	if _, err = transaction.Exec(context.Background(), querySaveTransaction, "transfer", senderID,
+		receiverID, amount); err != nil {
 		return err
 	}
 
@@ -144,15 +140,15 @@ func (s *Storage) UpdateBalance(userID int64, amount float64) (float64, error) {
 		return 0, err
 	}
 
-	var operationDescription string
+	var operationType string
 	if amount < 0 {
-		operationDescription = fmt.Sprintf("Write off %.2fRUB", amount*-1)
 		amount *= -1
+		operationType = "write_off"
 	} else {
-		operationDescription = fmt.Sprintf("Add %.2fRUB", amount)
+		operationType = "add"
 	}
 
-	if _, err = transaction.Exec(context.Background(), querySaveTransaction, operationDescription, amount, userID); err != nil {
+	if _, err = transaction.Exec(context.Background(), querySaveTransaction, operationType, userID, 0, amount); err != nil {
 		return 0, err
 	}
 

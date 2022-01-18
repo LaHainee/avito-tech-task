@@ -61,21 +61,21 @@ func TestHandlers_GetTransactions(t *testing.T) {
 				GetUserTransactionsFunc: func(n int64, transactionsSelectionParams *models.TransactionsSelectionParams) (models.Transactions, error) {
 					return models.Transactions{
 						&models.Transaction{
-							Description: "description",
-							Amount:      1000,
-							Created:     timeNow,
+							OperationType: "add",
+							Amount:        1000,
+							Created:       timeNow,
 						},
 					}, nil
 				},
 			},
 			userIDParam:    "1",
-			body:           `{"limit": 10}`,
+			body:           `{"limit": 10, "operation_type":1}`,
 			expectedStatus: http.StatusOK,
 			expected: models.Transactions{
 				&models.Transaction{
-					Description: "description",
-					Amount:      1000,
-					Created:     timeNow,
+					OperationType: "add",
+					Amount:        1000,
+					Created:       timeNow,
 				},
 			},
 		},
@@ -87,7 +87,7 @@ func TestHandlers_GetTransactions(t *testing.T) {
 				},
 			},
 			userIDParam:    "1",
-			body:           `{"limit": 10}`,
+			body:           `{"limit": 10, "operation_type":1}`,
 			expectedStatus: http.StatusNotFound,
 			expected:       &models.ResponseMessage{Message: createdErrors.ErrUserDoesNotExist.Error()},
 		},
@@ -99,7 +99,7 @@ func TestHandlers_GetTransactions(t *testing.T) {
 				},
 			},
 			userIDParam:    "1",
-			body:           `{"limit": 10}`,
+			body:           `{"limit": 10, "operation_type":1}`,
 			expectedStatus: http.StatusInternalServerError,
 			expected:       &models.ResponseMessage{Message: internalServerErr.Error()},
 		},

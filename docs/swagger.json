@@ -255,8 +255,11 @@
                 "created": {
                     "type": "string"
                 },
-                "description": {
+                "operation_type": {
                     "type": "string"
+                },
+                "receiver_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -270,6 +273,9 @@
             "type": "object",
             "properties": {
                 "limit": {
+                    "type": "integer"
+                },
+                "operation_type": {
                     "type": "integer"
                 },
                 "order_amount": {

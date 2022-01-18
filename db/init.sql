@@ -13,18 +13,25 @@ create unique index balance_id_uindex
 create unique index balance_user_id_uindex
     on balance (user_id);
 
+create type operation_type as
+    enum ('write_off', 'add', 'transfer');
+
 create table transactions
 (
-    id          serial
+    id             serial
         constraint transactions_pk
             primary key,
-    description varchar                                not null,
-    created     timestamp with time zone default now() not null,
-    amount      double precision                       not null,
-    user_id     bigint                                 not null
+    operation_type operation_type not null,
+    sender         bigint
+        constraint transactions_balance_user_id_fk_2
+            references balance (user_id)
+            on delete cascade,
+    receiver       bigint
         constraint transactions_balance_user_id_fk
             references balance (user_id)
-            on delete cascade
+            on delete cascade,
+    amount         double precision,
+    created        timestamp with time zone default now()
 );
 
 create unique index transactions_id_uindex

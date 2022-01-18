@@ -3,6 +3,7 @@ package usecase
 import (
 	"avito-tech-task/internal/app/balance"
 	"avito-tech-task/internal/app/models"
+	"avito-tech-task/internal/pkg/constants"
 	"avito-tech-task/internal/pkg/currency"
 	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
@@ -104,7 +105,7 @@ func (s *Service) UpdateBalance(data *models.RequestUpdateBalance) (*models.User
 			if err = s.storage.CreateAccount(data.UserID); err != nil { // create account if user does not exist
 				return nil, err
 			}
-			if data.OperationType == models.REDUCE { // trying to write off money from created account (balance = 0)
+			if data.OperationType == constants.REDUCE { // trying to write off money from created account (balance = 0)
 				return nil, createdErrors.ErrNotEnoughMoney
 			}
 		case false:
@@ -112,7 +113,7 @@ func (s *Service) UpdateBalance(data *models.RequestUpdateBalance) (*models.User
 		}
 	}
 
-	if data.OperationType == models.REDUCE {
+	if data.OperationType == constants.REDUCE {
 		if userData.Balance < data.Amount {
 			return nil, createdErrors.ErrNotEnoughMoney
 		}

@@ -29,10 +29,11 @@ func TestService_GetUserTransactions(t *testing.T) {
 			name:   "Successfully get transactions list",
 			userID: 1,
 			params: &models.TransactionsSelectionParams{
-				Limit:       0,
-				Since:       "some datetime",
-				OrderAmount: false,
-				OrderDate:   false,
+				Limit:         0,
+				OperationType: 1,
+				Since:         "some datetime",
+				OrderAmount:   false,
+				OrderDate:     false,
 			},
 			storageMock: &storageMock.MockStorage{
 				DoesUserExistFunc: func(n int64) (bool, error) {
@@ -41,18 +42,18 @@ func TestService_GetUserTransactions(t *testing.T) {
 				GetUserTransactionsFunc: func(n int64, transactionsSelectionParams *models.TransactionsSelectionParams) (models.Transactions, error) {
 					return models.Transactions{
 						&models.Transaction{
-							Description: "description",
-							Amount:      1000,
-							Created:     timeNow,
+							OperationType: "add",
+							Amount:        1000,
+							Created:       timeNow,
 						},
 					}, nil
 				},
 			},
 			expected: models.Transactions{
 				&models.Transaction{
-					Description: "description",
-					Amount:      1000,
-					Created:     timeNow,
+					OperationType: "add",
+					Amount:        1000,
+					Created:       timeNow,
 				},
 			},
 		},
@@ -60,10 +61,11 @@ func TestService_GetUserTransactions(t *testing.T) {
 			name:   "User does not exist",
 			userID: 1,
 			params: &models.TransactionsSelectionParams{
-				Limit:       0,
-				Since:       "",
-				OrderAmount: false,
-				OrderDate:   false,
+				Limit:         0,
+				OperationType: 1,
+				Since:         "",
+				OrderAmount:   false,
+				OrderDate:     false,
 			},
 			storageMock: &storageMock.MockStorage{
 				DoesUserExistFunc: func(n int64) (bool, error) {
@@ -77,10 +79,11 @@ func TestService_GetUserTransactions(t *testing.T) {
 			name:   "Error occurred in storage during checking user existence",
 			userID: 1,
 			params: &models.TransactionsSelectionParams{
-				Limit:       0,
-				Since:       "",
-				OrderAmount: false,
-				OrderDate:   false,
+				Limit:         0,
+				OperationType: 1,
+				Since:         "",
+				OrderAmount:   false,
+				OrderDate:     false,
 			},
 			storageMock: &storageMock.MockStorage{
 				DoesUserExistFunc: func(n int64) (bool, error) {

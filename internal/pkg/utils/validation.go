@@ -1,10 +1,9 @@
 package utils
 
 import (
+	"avito-tech-task/internal/pkg/constants"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
-
-	"avito-tech-task/internal/app/models"
 )
 
 type Validation struct {
@@ -14,7 +13,7 @@ type Validation struct {
 func NewValidator() *Validation {
 	validate := validator.New()
 
-	if err := validate.RegisterValidation("operation_type", validateOperationType); err != nil {
+	if err := validate.RegisterValidation("operation_type", validateOperationTypeUpdateBalance); err != nil {
 		logrus.Fatalf("Could not register validation func by \"operation_type\" tag: %s", err)
 	}
 
@@ -30,6 +29,6 @@ func (v *Validation) Validate(i interface{}) validator.ValidationErrors {
 	return nil
 }
 
-func validateOperationType(fl validator.FieldLevel) bool {
-	return fl.Field().Int() <= models.REDUCE && fl.Field().Int() >= 0
+func validateOperationTypeUpdateBalance(fl validator.FieldLevel) bool {
+	return fl.Field().Int() <= constants.REDUCE && fl.Field().Int() >= constants.ADD
 }
