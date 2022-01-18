@@ -10,7 +10,7 @@ type Transaction struct {
 }
 
 type TransactionsSelectionParams struct {
-	Limit         int    `json:"limit,omitempty" form:"limit"`
+	Limit         int    `json:"limit,omitempty" form:"limit" validate:"gte=0"`
 	Since         string `json:"since,omitempty" form:"since"`
 	OperationType int    `json:"operation_type,omitempty" form:"operation_type"`
 	OrderAmount   bool   `json:"order_amount,omitempty" form:"order_amount"`

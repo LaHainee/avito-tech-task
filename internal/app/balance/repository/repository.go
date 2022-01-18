@@ -1,12 +1,12 @@
 package repository
 
 import (
-	createdErrors "avito-tech-task/internal/pkg/errors"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v4"
 
 	"avito-tech-task/internal/app/models"
+	createdErrors "avito-tech-task/internal/pkg/errors"
 	"avito-tech-task/internal/pkg/utils"
 )
 

@@ -10,5 +10,5 @@ run-tests:
 lint:
 	golangci-lint run -c golangci.yml ./...
 
-build-docker:
+run:
 	docker-compose up --build -d

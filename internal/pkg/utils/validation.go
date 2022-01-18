@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"avito-tech-task/internal/pkg/constants"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
+
+	"avito-tech-task/internal/pkg/constants"
 )
 
 type Validation struct {

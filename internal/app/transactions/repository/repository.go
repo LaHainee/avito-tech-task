@@ -1,13 +1,14 @@
 package repository
 
 import (
-	"avito-tech-task/internal/pkg/constants"
 	"context"
 	"database/sql"
 	"errors"
+
 	"github.com/jackc/pgx/v4"
 
 	"avito-tech-task/internal/app/models"
+	"avito-tech-task/internal/pkg/constants"
 	"avito-tech-task/internal/pkg/utils"
 )
 

@@ -1,3 +1,4 @@
+--|------------------Balance------------------|--
 create table balance
 (
     id      serial
@@ -13,6 +14,11 @@ create unique index balance_id_uindex
 create unique index balance_user_id_uindex
     on balance (user_id);
 
+create index balance_user_id on balance using hash (user_id);
+--|------------------Balance------------------|--
+
+
+--|------------------Transactions------------------|--
 create type operation_type as
     enum ('write_off', 'add', 'transfer');
 
@@ -36,3 +42,7 @@ create table transactions
 
 create unique index transactions_id_uindex
     on transactions (id);
+
+create index transactions_sender_operation on transactions (sender, operation_type);
+create index transactions_sender_created on transactions (sender, created);
+--|------------------Transactions------------------|--
