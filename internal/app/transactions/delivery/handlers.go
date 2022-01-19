@@ -67,11 +67,19 @@ func (h *Handlers) GetTransactions(ctx echo.Context) error {
 			http.StatusNotFound,
 			&models.ResponseMessage{Message: err.Error()})
 	case false:
-		if err != nil {
-			h.logger.Errorf("Internal server error: %s", err)
+		switch errors.Is(err, createdErrors.ErrNegativeLimit) {
+		case true:
+			h.logger.Warnf("Bad request: %s", err)
 			return ctx.JSON(
-				http.StatusInternalServerError,
+				http.StatusUnprocessableEntity,
 				&models.ResponseMessage{Message: err.Error()})
+		case false:
+			if err != nil {
+				h.logger.Errorf("Internal server error: %s", err)
+				return ctx.JSON(
+					http.StatusInternalServerError,
+					&models.ResponseMessage{Message: err.Error()})
+			}
 		}
 	}
 

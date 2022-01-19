@@ -24,8 +24,7 @@ func NewService(storage transactions.Storage, validator *utils.Validation) *Serv
 func (s *Service) GetUserTransactions(userID int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
 	errs := s.validator.Validate(params) // validation
 	for _, err := range errs {
-		switch err.Field() {
-		case "Limit":
+		if err.Field() == "Limit" {
 			return nil, createdErrors.ErrNegativeLimit
 		}
 	}
