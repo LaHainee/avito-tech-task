@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"avito-tech-task/internal/pkg/utils"
 	"errors"
 	"testing"
 	"time"
@@ -98,7 +99,8 @@ func TestService_GetUserTransactions(t *testing.T) {
 	for _, current := range tests {
 		test := current
 		t.Run(test.name, func(t *testing.T) {
-			service := NewService(test.storageMock)
+			validator := utils.NewValidator()
+			service := NewService(test.storageMock, validator)
 
 			got, err := service.GetUserTransactions(test.userID, test.params)
 

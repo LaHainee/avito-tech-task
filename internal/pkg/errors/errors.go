@@ -13,4 +13,5 @@ var (
 	ErrSenderIDisRequired        = errors.New("sender_id is required")
 	ErrReceiverIDisRequired      = errors.New("receiver_id is required")
 	ErrNotSupportedCurrency      = errors.New("currency is not supported")
+	ErrNegativeLimit             = errors.New("limit value must be positive integer")
 )

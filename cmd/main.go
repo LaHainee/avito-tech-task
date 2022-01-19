@@ -34,7 +34,7 @@ func NewHandlers(conn utils.PgxIface, logger *logrus.Logger, validator *utils.Va
 	balanceHandlers := deliveryBalance.NewHandlers(balanceService, logger)
 
 	transactionsStorage := repositoryTransactions.NewStorage(conn)
-	transactionsService := usecaseTransactions.NewService(transactionsStorage)
+	transactionsService := usecaseTransactions.NewService(transactionsStorage, validator)
 	transactionsHandlers := deliveryTransactions.NewHandlers(transactionsService, logger)
 
 	return &Handlers{
@@ -54,8 +54,6 @@ func NewHandlers(conn utils.PgxIface, logger *logrus.Logger, validator *utils.Va
 // @x-extension-openapi  {"example": "value on a json format"}
 
 func main() {
-	// TODO добавить валидацию на поле limit в транзакциях
-
 	server := echo.New()
 
 	config := config.NewConfig()

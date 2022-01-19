@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"avito-tech-task/internal/pkg/utils"
 	"strings"
 
 	"avito-tech-task/internal/app/models"
@@ -9,14 +10,26 @@ import (
 )
 
 type Service struct {
-	storage transactions.Storage
+	storage   transactions.Storage
+	validator *utils.Validation
 }
 
-func NewService(storage transactions.Storage) *Service {
-	return &Service{storage}
+func NewService(storage transactions.Storage, validator *utils.Validation) *Service {
+	return &Service{
+		storage:   storage,
+		validator: validator,
+	}
 }
 
 func (s *Service) GetUserTransactions(userID int64, params *models.TransactionsSelectionParams) (models.Transactions, error) {
+	errs := s.validator.Validate(params) // validation
+	for _, err := range errs {
+		switch err.Field() {
+		case "Limit":
+			return nil, createdErrors.ErrNegativeLimit
+		}
+	}
+
 	doesUserExist, err := s.storage.DoesUserExist(userID)
 	if err != nil {
 		return nil, err
